@@ -31,6 +31,10 @@ Rules:
 2. Do not include markdown formatting (like ```sql).
 3. Do not include any explanations.
 4. Only query the columns that exist in the schema provided.
+5. For text comparisons (especially lgu and barangay), ALWAYS use ILIKE instead of = to handle case variations.
+6. When users mention location names (lgu, barangay), normalize them to Proper Case format (e.g., "general santos city" → "General Santos City").
+7. Handle all user input variations: lowercase, UPPERCASE, mixed case, extra spaces - convert them to the proper format.
+8. Example: If user asks "everything in GENERAL SANTOS CITY", convert to: WHERE lgu ILIKE 'General Santos City'
 """
 
 def execute_sql(query):
