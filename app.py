@@ -7,7 +7,7 @@ from google import genai
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("AIzaSyAAifks3wub5fRGY15K7M7t-6jmJ5c9pz8"))
+client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
 
 SCHEMA_PROMPT = """
 You are an expert SQL assistant for an Incident Command System.
@@ -55,6 +55,35 @@ def execute_sql(query):
         return df, None
     except Exception as e:
         return None, str(e)
+
+def generate_natural_language_answer(user_question, results_df):
+    """Use AI to convert query results into a natural English answer."""
+    try:
+        # Convert dataframe to a readable string format for the AI
+        results_text = results_df.to_string()
+        
+        prompt = f"""You are an assistant for an Incident Command System database.
+        
+The user asked: "{user_question}"
+
+Here are the query results:
+{results_text}
+
+Please provide a clear, concise, natural English answer to the user's question based on these results.
+- Be conversational and easy to understand
+- Summarize key findings
+- If there are multiple records, highlight important patterns or totals
+- Do not include technical SQL or database terminology
+- Keep the answer to 2-3 sentences maximum"""
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        
+        return response.text.strip()
+    except Exception as e:
+        return f"Could not generate answer: {str(e)}"
 
 def generate_summary_message(results_df):
     """Generate a human-friendly summary message for any query result."""
@@ -115,6 +144,8 @@ if "results_error" not in st.session_state:
     st.session_state.results_error = None
 if "success_message" not in st.session_state:
     st.session_state.success_message = None
+if "natural_answer" not in st.session_state:
+    st.session_state.natural_answer = None
 
 st.title("ICS Data Query Assistant")
 st.markdown("Ask a question about the incident database in plain English.")
@@ -159,14 +190,18 @@ if st.button("Generate & Run Query"):
                         st.session_state.results_df = results_df
                         st.session_state.results_error = None
                         
-                        st.subheader("Results:")
-                        st.dataframe(results_df, use_container_width=True)
+                        # Generate natural language answer
+                        with st.spinner("Generating answer..."):
+                            natural_answer = generate_natural_language_answer(user_question, results_df)
+                            st.session_state.success_message = natural_answer
                         
-                        # Generate and show summary for all results
-                        summary = generate_summary_message(results_df)
-                        if summary:
-                            st.session_state.success_message = summary
-                            st.info(summary)
+                        # Display the answer prominently
+                        st.subheader("Answer:")
+                        st.success(natural_answer)
+                        
+                        # Show raw results for transparency
+                        st.subheader("Query Results:")
+                        st.dataframe(results_df, use_container_width=True)
                         
             except Exception as e:
                 st.session_state.results_error = str(e)
