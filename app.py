@@ -4,6 +4,8 @@ import pandas as pd
 import os
 from dotenv import load_dotenv
 from google import genai
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 load_dotenv()
 
@@ -59,6 +61,79 @@ def execute_sql(query):
         return df, None
     except Exception as e:
         return None, str(e)
+
+def get_valid_locations():
+    """Fetch all unique LGU and barangay values from database."""
+    try:
+        conn = psycopg2.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT")
+        )
+        cursor = conn.cursor()
+        
+        # Get unique LGUs and barangays
+        cursor.execute("SELECT DISTINCT lgu FROM incidents WHERE lgu IS NOT NULL ORDER BY lgu")
+        lgus = [row[0] for row in cursor.fetchall()]
+        
+        cursor.execute("SELECT DISTINCT barangay FROM incidents WHERE barangay IS NOT NULL ORDER BY barangay")
+        barangays = [row[0] for row in cursor.fetchall()]
+        
+        cursor.close()
+        conn.close()
+        
+        return lgus, barangays
+    except Exception as e:
+        st.warning(f"Could not fetch valid locations: {str(e)}")
+        return [], []
+
+def fuzzy_match_location(user_input, valid_locations, threshold=75):
+    """Use fuzzy matching to find the best matching location."""
+    if not user_input or not valid_locations:
+        return user_input
+    
+    # Find best match
+    best_match, score = process.extractOne(user_input, valid_locations, scorer=fuzz.token_set_ratio)
+    
+    # Only return match if confidence is high enough
+    if score >= threshold:
+        return best_match
+    else:
+        return user_input
+
+def enhance_user_question_with_fuzzy_matching(question, lgus, barangays):
+    """Replace misspelled locations in user question with fuzzy-matched correct ones."""
+    enhanced_question = question
+    
+    # Try to fuzzy match common location keywords in the question
+    words = question.lower().split()
+    
+    # Look for location mentions (usually 2-3 word phrases for LGU names)
+    # Check for barangay first (often single or double words)
+    for barangay in barangays:
+        barangay_lower = barangay.lower()
+        # Simple check if barangay name appears (even partially)
+        if any(word in barangay_lower for word in words):
+            # Fuzzy match to correct any typos
+            fuzzy_barangay = fuzzy_match_location(barangay_lower, [b.lower() for b in barangays], threshold=70)
+            for b in barangays:
+                if b.lower() == fuzzy_barangay:
+                    enhanced_question = enhanced_question.replace(barangay_lower, b)
+                    break
+    
+    # Check for LGU names
+    for lgu in lgus:
+        lgu_lower = lgu.lower()
+        # Fuzzy match the LGU
+        fuzzy_lgu = fuzzy_match_location(question.lower(), [l.lower() for l in lgus], threshold=70)
+        for l in lgus:
+            if l.lower() == fuzzy_lgu:
+                enhanced_question = enhanced_question.replace(fuzzy_lgu, l)
+                break
+    
+    return enhanced_question
 
 def generate_natural_language_answer(user_question, results_df):
     """Use AI to convert query results into a natural English answer."""
@@ -170,9 +245,19 @@ if st.button("Generate & Run Query"):
         
         with st.spinner("Translating to SQL..."):
             try:
+                # Fetch valid locations and apply fuzzy matching
+                lgus, barangays = get_valid_locations()
+                enhanced_question = user_question
+                
+                # Apply fuzzy matching for better location matching
+                if lgus or barangays:
+                    enhanced_question = enhance_user_question_with_fuzzy_matching(user_question, lgus, barangays)
+                    if enhanced_question != user_question:
+                        st.info(f"📍 Corrected question: *{enhanced_question}*")
+                
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=f"{SCHEMA_PROMPT}\n\nUser Question: {user_question}"
+                    contents=f"{SCHEMA_PROMPT}\n\nUser Question: {enhanced_question}"
                 )
                 
                 generated_sql = response.text.replace('```sql', '').replace('```', '').strip()
