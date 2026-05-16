@@ -229,7 +229,7 @@ if "natural_answer" not in st.session_state:
 st.title("ICS Data Query Assistant")
 st.markdown("Ask a question about the incident database in plain English.")
 
-user_question = st.text_input("Example: 'Show me all High severity incidents in General Santos City'")
+user_question = st.text_input("Input Question")
 
 # Clear results if question changed
 if user_question != st.session_state.current_question:
