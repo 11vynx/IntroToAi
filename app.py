@@ -1,5 +1,5 @@
 import streamlit as st
-import psycopg
+import psycopg2
 import pandas as pd
 import os
 from dotenv import load_dotenv
@@ -41,7 +41,7 @@ Rules:
 
 def execute_sql(query):
     try:
-        conn = psycopg.connect(
+        conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME"),
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
@@ -65,7 +65,7 @@ def execute_sql(query):
 def get_valid_locations():
     """Fetch all unique LGU and barangay values from database."""
     try:
-        conn = psycopg.connect(
+        conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME"),
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
