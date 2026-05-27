@@ -3,13 +3,13 @@ import psycopg2
 import pandas as pd
 import os
 from dotenv import load_dotenv
-from google import genai
+from groq import Groq
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY2"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 SCHEMA_PROMPT = """
 You are an expert SQL assistant for an Incident Command System.
@@ -143,7 +143,7 @@ def enhance_user_question_with_fuzzy_matching(question, lgus, barangays):
     return enhanced_question
 
 def generate_natural_language_answer(user_question, results_df):
-    """Use AI to convert query results into a natural English answer."""
+    """Use Groq AI to convert query results into a natural English answer."""
     try:
         # Convert dataframe to a readable string format for the AI
         results_text = results_df.to_string()
@@ -162,12 +162,16 @@ Please provide a clear, concise, natural English answer to the user's question b
 - Do not include technical SQL or database terminology
 - Keep the answer to 2-3 sentences maximum"""
 
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
+        message = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=500
         )
         
-        return response.text.strip()
+        return message.choices[0].message.content.strip()
     except Exception as e:
         return f"Could not generate answer: {str(e)}"
 
@@ -217,7 +221,7 @@ def generate_summary_message(results_df):
             values = results_df[first_col].tolist()
             return f"Found {num_rows} {first_col}: " + ", ".join(str(v) for v in values)
 
-st.set_page_config(page_title="ICS Query Assistant: Natural Language → SQL → Execution → Results", layout="centered")
+st.set_page_config(page_title="ICS Query Assistant (Groq): Natural Language → SQL → Execution → Results", layout="centered")
 
 # Initialize session state
 if "current_question" not in st.session_state:
@@ -233,8 +237,8 @@ if "success_message" not in st.session_state:
 if "natural_answer" not in st.session_state:
     st.session_state.natural_answer = None
 
-st.title("ICS Query Assistant")
-st.markdown("Natural Language → SQL → Execution → Data Tables & Plain English Results")
+st.title("ICS Query Assistant (Groq API)")
+st.markdown("Using Groq API | Natural Language → SQL → Execution → Data Tables & Plain English Results")
 
 user_question = st.text_input("Input Question")
 
@@ -260,12 +264,16 @@ if st.button("Generate & Run Query"):
                 if lgus or barangays:
                     enhanced_question = enhance_user_question_with_fuzzy_matching(user_question, lgus, barangays)
                 
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=f"{SCHEMA_PROMPT}\n\nUser Question: {enhanced_question}"
+                message = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "user", "content": f"{SCHEMA_PROMPT}\n\nUser Question: {enhanced_question}"}
+                    ],
+                    temperature=0.2,
+                    max_tokens=500
                 )
                 
-                generated_sql = response.text.replace('```sql', '').replace('```', '').strip()
+                generated_sql = message.choices[0].message.content.replace('```sql', '').replace('```', '').strip()
                 st.session_state.generated_sql = generated_sql
                 
                 st.subheader("Generated SQL:")
