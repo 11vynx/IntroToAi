@@ -28,22 +28,16 @@ CREATE TABLE incidents (
     status VARCHAR(50) DEFAULT 'active'
 );
 
-IMPORTANT LOCATION CONTEXT:
-- South Cotabato is a PROVINCE that contains multiple municipalities (lgu) and barangays
-- When a user asks "everything in South Cotabato" or "all incidents in South Cotabato", they mean ALL incidents recorded.
-- Do NOT filter by a specific barangay unless explicitly mentioned
-
 Rules:
 1. Return ONLY the raw SQL query.
 2. Do not include markdown formatting (like ```sql).
 3. Do not include any explanations.
 4. Only query the columns that exist in the schema provided.
 5. For text comparisons (especially lgu and barangay), ALWAYS use ILIKE instead of = to handle case variations.
-6. When users mention location names (lgu, barangay), normalize them to Proper Case format (e.g., "general santos city" → "General Santos City", "south cotabato" → "South Cotabato").
+6. When users mention location names (lgu, barangay), normalize them to Proper Case format (e.g., "general santos city" → "General Santos City").
 7. Handle all user input variations: lowercase, UPPERCASE, mixed case, extra spaces - convert them to the proper format.
-8. When user asks for "everything", "all", or "every" in a location, match on the LGU field with ILIKE '%LocationName%' or ILIKE 'LocationName%'
-9. Example: If user asks "everything in South Cotabato", return: SELECT * FROM incidents WHERE lgu ILIKE '%South Cotabato%' ORDER BY datetime DESC
-10. Example: If user asks "incidents in a specific barangay like Polomolok", add: AND barangay ILIKE 'Polomolok'
+8. Example: If user asks "everything in GENERAL SANTOS CITY", convert to: WHERE lgu ILIKE 'General Santos City'
+9. When user mentions "South Cotabato" (in any case variation), it means ALL incidents - return: SELECT * FROM incidents (because South Cotabato is the entire coverage area).
 """
 
 def execute_sql(query):

@@ -37,6 +37,7 @@ Rules:
 6. When users mention location names (lgu, barangay), normalize them to Proper Case format (e.g., "general santos city" → "General Santos City").
 7. Handle all user input variations: lowercase, UPPERCASE, mixed case, extra spaces - convert them to the proper format.
 8. Example: If user asks "everything in GENERAL SANTOS CITY", convert to: WHERE lgu ILIKE 'General Santos City'
+9. When user mentions "South Cotabato" (in any case variation), it means ALL incidents - return: SELECT * FROM incidents (because South Cotabato is the entire coverage area).
 """
 
 def execute_sql(query):
