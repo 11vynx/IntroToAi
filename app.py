@@ -30,7 +30,7 @@ CREATE TABLE incidents (
 
 IMPORTANT LOCATION CONTEXT:
 - South Cotabato is a PROVINCE that contains multiple municipalities (lgu) and barangays
-- When a user asks "everything in South Cotabato" or "all incidents in South Cotabato", they mean ALL incidents where lgu contains or matches South Cotabato
+- When a user asks "everything in South Cotabato" or "all incidents in South Cotabato", they mean ALL incidents recorded.
 - Do NOT filter by a specific barangay unless explicitly mentioned
 
 Rules:
