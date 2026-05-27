@@ -9,7 +9,7 @@ from fuzzywuzzy import process
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY2"))
 
 SCHEMA_PROMPT = """
 You are an expert SQL assistant for an Incident Command System.
