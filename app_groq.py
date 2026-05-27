@@ -215,7 +215,7 @@ def generate_summary_message(results_df):
             values = results_df[first_col].tolist()
             return f"Found {num_rows} {first_col}: " + ", ".join(str(v) for v in values)
 
-st.set_page_config(page_title="ICS Query Assistant (Groq): Natural Language → SQL → Execution → Results", layout="centered")
+st.set_page_config(page_title="ICS Query Assistant: Natural Language → SQL → Execution → Results", layout="centered")
 
 # Initialize session state
 if "current_question" not in st.session_state:
@@ -231,8 +231,8 @@ if "success_message" not in st.session_state:
 if "natural_answer" not in st.session_state:
     st.session_state.natural_answer = None
 
-st.title("ICS Query Assistant (Groq API)")
-st.markdown("Using Groq API | Natural Language → SQL → Execution → Data Tables & Plain English Results")
+st.title("ICS Query Assistant")
+st.markdown("Natural Language → SQL → Execution → Data Tables & Plain English Results")
 
 user_question = st.text_input("Input Question")
 
